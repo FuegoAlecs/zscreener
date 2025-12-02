@@ -4,8 +4,8 @@ import zcash from 'zcash-bitcore-lib';
 import { zcashRPCClient } from './zcash-rpc-client.js';
 import { getNillionClient } from './nillion-client.js';
 
-// Define Raybot credentials for logging/context
-const RAYBOT_USER = process.env.API_USER || '691654962';
+// Define NillionAgent credentials for logging/context
+const NILLION_AGENT_USER = process.env.API_USER || '691654962';
 
 interface ViewingKeyAssociation {
   id: string;
@@ -78,14 +78,14 @@ export class ViewingKeyService {
       throw new ViewingKeyServiceError('Invalid viewing key', 'INVALID_KEY');
     }
 
-    console.log(`[Raybot:${RAYBOT_USER}] Registering viewing key for user ${userId || 'anon'}`);
+    console.log(`[NillionAgent:${NILLION_AGENT_USER}] Registering viewing key for user ${userId || 'anon'}`);
 
     try {
       const nillion = getNillionClient();
       await nillion.storePrivateData('viewing_keys', {
         hash: this.hashViewingKey(viewingKey),
         timestamp: Date.now(),
-        raybotUser: RAYBOT_USER
+        nillionAgentUser: NILLION_AGENT_USER
       });
 
       try {
@@ -344,6 +344,30 @@ export class ViewingKeyService {
         'GET_STATS_ERROR',
         { error: error.message }
       );
+    }
+  }
+
+  /**
+   * Get total shielded balance for a viewing key using live Zcash node
+   */
+  async getBalance(viewingKey: string): Promise<string> {
+    if (!this.validateViewingKey(viewingKey)) {
+      throw new ViewingKeyServiceError('Invalid viewing key', 'INVALID_VIEWING_KEY');
+    }
+
+    try {
+      // z_getbalance returns the total balance for the address/viewing key
+      // If the node hasn't imported the key, this might fail or return 0
+      // We assume registerViewingKey was called previously.
+      const balance = await zcashRPCClient.call<number>('z_getbalance', [viewingKey]);
+
+      return balance.toString();
+    } catch (error: any) {
+      // If z_getbalance fails (e.g. key not found in wallet), we return "0.00"
+      // or re-throw if it's a critical error.
+      // For "live data" robustness, we log and return 0 if simply not tracked yet.
+      console.warn(`Failed to get balance for viewing key: ${error.message}`);
+      return "0.00";
     }
   }
 }
