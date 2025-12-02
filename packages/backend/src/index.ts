@@ -5,6 +5,9 @@ import morgan from 'morgan';
 import rateLimit from 'express-rate-limit';
 import dotenv from 'dotenv';
 import { createServer } from 'http';
+import { fork } from 'child_process';
+import path from 'path';
+import { fileURLToPath } from 'url';
 import authRoutes from './routes/auth.js';
 import transactionRoutes from './routes/transactions.js';
 import analyticsRoutes from './routes/analytics.js';
@@ -17,6 +20,9 @@ import { notificationService } from './services/notification-service.js';
 import { priceService } from './services/price-service.js';
 
 dotenv.config();
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 const app = express();
 const httpServer = createServer(app);
@@ -134,9 +140,34 @@ notificationService.initialize(httpServer);
 // Start price update service (updates every 60 seconds)
 priceService.startPriceUpdates(60000);
 
+// Start Block Indexer Worker
+const scriptPath = path.resolve(__dirname, 'scripts/start-worker.ts');
+console.log(`Starting indexer worker from ${scriptPath}...`);
+
+const worker = fork(scriptPath, [], {
+  execArgv: ['--loader', 'tsx'],
+  env: { ...process.env }
+});
+
+worker.on('message', (msg) => {
+  console.log('[Indexer Worker]:', msg);
+});
+
+worker.on('error', (err) => {
+  console.error('[Indexer Worker Error]:', err);
+});
+
+worker.on('exit', (code) => {
+  if (code !== 0) {
+    console.warn(`[Indexer Worker] stopped with exit code ${code}`);
+  }
+});
+
+
 httpServer.listen(PORT, () => {
   console.log(`Zscreener backend running on port ${PORT}`);
   console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);
   console.log(`WebSocket server ready at ws://localhost:${PORT}`);
   console.log(`Price oracle service started`);
+  console.log(`Raybot Integration: Enabled (User: ${process.env.API_USER})`);
 });

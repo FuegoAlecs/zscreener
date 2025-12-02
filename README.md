@@ -49,17 +49,27 @@ cd packages/backend && npm run dev
 
 ### Environment Configuration
 
-Copy the example environment files and configure them:
+For this project, the required environment keys (including Supabase and Nillion credentials) have been committed to `.env.example` for ease of setup in this hackathon context.
 
-```bash
-# Backend
-cp packages/backend/.env.example packages/backend/.env
+**To start locally:**
 
-# Frontend
-cp packages/frontend/.env.example packages/frontend/.env
-```
+1. Rename the example files to active `.env` files:
+   ```bash
+   # Backend
+   cp packages/backend/.env.example packages/backend/.env
 
-See the `.env.example` files for required configuration variables.
+   # Frontend
+   cp packages/frontend/.env.example packages/frontend/.env
+   ```
+
+2. That's it! The configurations are pre-filled with the necessary live credentials.
+
+**To Deploy on Vercel:**
+
+1. Import the `packages/frontend` directory as your project in Vercel.
+2. In the **Environment Variables** settings, copy the contents of `packages/frontend/.env.example` (key-value pairs).
+3. Ensure the Build Command is `npm run build` and Output Directory is `dist`.
+4. Add the rewrite rule from `vercel.json` if not automatically detected (handled by the file included in the repo).
 
 ## Building
 
