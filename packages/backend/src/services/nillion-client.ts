@@ -6,7 +6,7 @@ const config = {
   orgDid: process.env.NILLION_ORG_DID || '',
   apiUser: process.env.API_USER || '',
   apiKey: process.env.API_KEY || '',
-  raybotId: process.env.RAYBOT_ID || 'Raybot',
+  nillionAgentId: process.env.NILLION_AGENT_ID || 'NillionAgent',
   endpoint: process.env.NILLION_ENDPOINT || 'https://api.nillion.testnet',
 };
 
@@ -55,15 +55,16 @@ export class NillionClient {
 
   async authenticate(): Promise<void> {
     if (!config.apiKey || !config.apiUser) {
-      console.warn('Nillion/Raybot credentials not configured properly.');
-      return;
+      throw new Error('Nillion/NillionAgent credentials (API_KEY, API_USER) not configured properly. Cannot proceed in live mode.');
     }
 
     try {
-      console.log(`Authenticating with Nillion/Raybot as user ${config.apiUser}...`);
+      console.log(`Authenticating with Nillion/NillionAgent as user ${config.apiUser}...`);
+      // In a real implementation, this would exchange credentials for a token.
+      // Since the API requires a key, we validate it exists.
       this.accessToken = config.apiKey;
       this.tokenExpiry = Date.now() + 3600000;
-      console.log('Nillion authentication (Raybot) setup complete.');
+      console.log('Nillion authentication (NillionAgent) setup complete.');
     } catch (error) {
       console.error('Nillion authentication failed:', error);
       throw error;

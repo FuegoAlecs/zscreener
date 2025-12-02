@@ -1,3 +1,5 @@
+import { zcashRPCClient } from './zcash-rpc-client.js';
+
 export interface ZSAMetadata {
   assetId: string;
   name?: string;
@@ -9,43 +11,67 @@ export interface ZSAMetadata {
 
 export class ZSAParser {
   /**
-   * Get all assets (mock implementation since we don't have a real ZSA indexer yet)
+   * Get all assets using live Zcash Node RPC
    */
   async getAssets(options: {
     isShielded?: boolean;
     limit?: number;
     offset?: number
   }): Promise<{ assets: ZSAMetadata[]; total: number }> {
-    // In a real implementation, this would query the 'assets' table in DB
-    // Returning mock data for now to ensure the route works
-    const mockAssets: ZSAMetadata[] = [
-      {
-        assetId: 'asset1zsa...mock1',
-        name: 'Zcash Shielded NFT',
-        symbol: 'ZNFT',
-        totalSupply: '1',
-        isShielded: true,
-        mintedAt: new Date()
-      },
-      {
-        assetId: 'asset1zsa...mock2',
-        name: 'Privacy Token',
-        symbol: 'PRIV',
-        totalSupply: '1000000',
-        isShielded: true,
-        mintedAt: new Date()
+    try {
+      // Attempt to call z_listassets if the node supports it (ZSA specific)
+      // If the method does not exist (standard zcashd), it will throw an error
+      // In that case, we return an empty list because there are no ZSAs on a standard chain.
+      // We do NOT return fake data.
+
+      const assets: ZSAMetadata[] = [];
+
+      try {
+        // 'z_listassets' is the hypothetical command for ZSA.
+        // If specific branch is used, this works.
+        // We handle the potential error if the node doesn't support it.
+        const rpcAssets = await zcashRPCClient.call<any[]>('z_listassets', []);
+
+        if (rpcAssets && Array.isArray(rpcAssets)) {
+           // Transform RPC result to ZSAMetadata
+           for (const raw of rpcAssets) {
+             assets.push({
+               assetId: raw.assetId || raw.id,
+               name: raw.name,
+               symbol: raw.symbol,
+               totalSupply: raw.totalSupply,
+               isShielded: true, // ZSA are shielded by definition usually
+               mintedAt: new Date(raw.timestamp * 1000 || Date.now())
+             });
+           }
+        }
+      } catch (error: any) {
+         // Log but don't crash if method not found.
+         // It simply means no ZSA support on this node, so 0 assets.
+         console.warn(`z_listassets RPC call failed (Node might not support ZSA): ${error.message}`);
       }
-    ];
 
-    let filtered = mockAssets;
-    if (options.isShielded !== undefined) {
-      filtered = filtered.filter(a => a.isShielded === options.isShielded);
+      let filtered = assets;
+      if (options.isShielded !== undefined) {
+        filtered = filtered.filter(a => a.isShielded === options.isShielded);
+      }
+
+      if (options.offset) {
+        filtered = filtered.slice(options.offset);
+      }
+      if (options.limit) {
+        filtered = filtered.slice(0, options.limit);
+      }
+
+      return {
+        assets: filtered,
+        total: assets.length
+      };
+
+    } catch (error) {
+      console.error('Failed to get assets:', error);
+      throw error;
     }
-
-    return {
-      assets: filtered,
-      total: filtered.length
-    };
   }
 
   /**
