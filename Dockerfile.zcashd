@@ -14,7 +14,8 @@ RUN echo "testnet=1" > /root/.zcash/zcash.conf && \
     echo "rpcallowip=0.0.0.0/0" >> /root/.zcash/zcash.conf && \
     echo "txindex=1" >> /root/.zcash/zcash.conf && \
     echo "experimentalfeatures=1" >> /root/.zcash/zcash.conf && \
-    echo "insightexplorer=1" >> /root/.zcash/zcash.conf
+    echo "insightexplorer=1" >> /root/.zcash/zcash.conf && \
+    echo "i-am-aware-zcashd-will-be-replaced-by-zebrad-and-zallet-in-2025=1" >> /root/.zcash/zcash.conf
 
 # Expose RPC port (Testnet)
 EXPOSE 18232
