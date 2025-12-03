@@ -47,3 +47,18 @@ export const getWalletTransactions = async (viewingKey: string) => {
   });
   return response.data;
 };
+
+export const getVolume = async (timeRange: string = '24h') => {
+  const response = await api.get('/analytics/volume', {
+    params: { timeRange }
+  });
+  return response.data;
+};
+
+export const createIntent = async (data: { amount: string, nearAccount: string }) => {
+  const response = await api.post('/cross-chain/intent', {
+    accountId: data.nearAccount,
+    payload: { amount: data.amount, asset: 'ZEC' } // Construct payload
+  });
+  return response.data;
+};
