@@ -99,7 +99,18 @@ class PriceService {
         console.warn('Returning stale price data due to fetch error');
         return JSON.parse(staleCache);
       }
-      throw error;
+
+      // Fallback: If cache is empty and fetch failed, return 0 instead of crashing API
+      return {
+        zec: {
+          usd: 0,
+          usd_24h_change: 0,
+          usd_24h_vol: 0,
+          usd_market_cap: 0,
+          last_updated_at: Date.now() / 1000,
+        },
+        cached_at: Date.now(),
+      };
     }
   }
 
