@@ -99,9 +99,9 @@ export class ZcashRPCClient {
       url: config?.url || process.env.ZCASH_RPC_URL || 'http://localhost:8232',
       user: config?.user || process.env.ZCASH_RPC_USER || 'zcashrpc',
       password: config?.password || process.env.ZCASH_RPC_PASSWORD || '',
-      timeout: config?.timeout || 30000,
-      maxRetries: config?.maxRetries || 3,
-      retryDelay: config?.retryDelay || 1000,
+      timeout: config?.timeout || 60000, // Increased to 60s for slow nodes
+      maxRetries: config?.maxRetries || 10, // Increased retries
+      retryDelay: config?.retryDelay || 5000, // Increased delay between retries
     };
 
     this.client = axios.create({
