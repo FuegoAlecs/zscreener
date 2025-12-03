@@ -1,23 +1,18 @@
 # Use official Zcash image
 FROM electriccoinco/zcashd:latest
 
-# Create configuration directory
-RUN mkdir -p /root/.zcash
+# Switch to root to ensure we can set permissions
+USER root
 
-# Create zcash.conf
-# Defaults to Testnet for faster sync and testing
-RUN echo "testnet=1" > /root/.zcash/zcash.conf && \
-    echo "addnode=testnet.z.cash" >> /root/.zcash/zcash.conf && \
-    echo "rpcuser=zcashrpc" >> /root/.zcash/zcash.conf && \
-    echo "rpcpassword=password" >> /root/.zcash/zcash.conf && \
-    echo "rpcport=18232" >> /root/.zcash/zcash.conf && \
-    echo "rpcallowip=0.0.0.0/0" >> /root/.zcash/zcash.conf && \
-    echo "txindex=1" >> /root/.zcash/zcash.conf && \
-    echo "experimentalfeatures=1" >> /root/.zcash/zcash.conf && \
-    echo "insightexplorer=1" >> /root/.zcash/zcash.conf
+# Create configuration directory at the correct path
+RUN mkdir -p /srv/zcashd/.zcash && chmod 777 /srv/zcashd/.zcash
+
+# Copy startup script
+COPY start-zcash.sh /usr/local/bin/start-zcash.sh
+RUN chmod +x /usr/local/bin/start-zcash.sh
 
 # Expose RPC port (Testnet)
 EXPOSE 18232
 
-# Start zcashd
-CMD ["zcashd", "-printtoconsole"]
+# Set ENTRYPOINT to override the base image's entrypoint
+ENTRYPOINT ["/usr/local/bin/start-zcash.sh"]
