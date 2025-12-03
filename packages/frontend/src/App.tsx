@@ -6,6 +6,7 @@ import { Explorer } from './pages/Explorer';
 import { TransactionDetail } from './pages/TransactionDetail';
 import { Wallet } from './pages/Wallet';
 import { CrossChain } from './pages/CrossChain';
+import { Analytics } from './pages/Analytics';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -27,7 +28,7 @@ function App() {
             <Route path="/tx/:hash" element={<TransactionDetail />} />
             <Route path="/wallet" element={<Wallet />} />
             <Route path="/cross-chain" element={<CrossChain />} />
-            <Route path="/analytics" element={<div className="text-white">Analytics Coming Soon</div>} />
+            <Route path="/analytics" element={<Analytics />} />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         </Layout>
