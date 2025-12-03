@@ -25,11 +25,19 @@ async function startWorker() {
 
     // 3. Start Chain Synchronizer (Separate Process)
     // This handles block headers and advanced chain state logic independently
-    const chainSyncPath = path.resolve(__dirname, '../workers/chain-sync.ts');
-    console.log(`Spawning Chain Sync Worker from ${chainSyncPath}...`);
+
+    // Determine correct file extension and location based on execution context
+    const isCompiled = __filename.endsWith('.js');
+    const workerExtension = isCompiled ? 'js' : 'ts';
+    const chainSyncPath = path.resolve(__dirname, `../workers/chain-sync.${workerExtension}`);
+
+    console.log(`Spawning Chain Sync Worker from ${chainSyncPath} (Compiled: ${isCompiled})...`);
+
+    // In production/compiled mode, we don't need tsx loader
+    const execArgv = isCompiled ? [] : ['--import', 'tsx'];
 
     const chainSyncWorker = fork(chainSyncPath, [], {
-      execArgv: ['--loader', 'tsx'],
+      execArgv,
       env: { ...process.env }
     });
 
