@@ -17,7 +17,6 @@ import { motion, AnimatePresence } from 'framer-motion';
 export const Wallet = () => {
   const [viewingKey, setViewingKey] = useState('');
   const [showKey, setShowKey] = useState(false);
-  const [isSubmitting, setIsSubmitting] = useState(false);
   const [activeKey, setActiveKey] = useState<string | null>(null);
 
   const { data: walletData, isLoading } = useQuery({
@@ -30,15 +29,13 @@ export const Wallet = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!viewingKey) return;
-
-    setIsSubmitting(true);
-    // Simulate Nillion secure storage delay (for UI feedback)
-    await new Promise(resolve => setTimeout(resolve, 1500));
     setActiveKey(viewingKey);
-    setIsSubmitting(false);
   };
 
   const data = (walletData as any)?.data;
+
+  // Use isLoading from react-query to indicate submission/processing status
+  const isSubmitting = isLoading && !!activeKey;
 
   return (
     <div className="max-w-4xl mx-auto space-y-8">
@@ -59,7 +56,7 @@ export const Wallet = () => {
           <span className="text-xs font-medium text-indigo-300">Nillion Secure Enclave</span>
         </div>
 
-        {!activeKey ? (
+        {!activeKey && !isSubmitting ? (
           <form onSubmit={handleSubmit} className="space-y-6 max-w-xl mx-auto mt-4">
             <div className="space-y-2">
               <label className="text-sm font-medium text-slate-300 ml-1">
@@ -96,22 +93,19 @@ export const Wallet = () => {
 
             <button
               type="submit"
-              disabled={!viewingKey || isSubmitting}
+              disabled={!viewingKey}
               className="w-full py-4 bg-indigo-600 hover:bg-indigo-500 disabled:bg-slate-800 disabled:text-slate-500 text-white rounded-xl font-medium transition-all shadow-lg shadow-indigo-500/20 hover:shadow-indigo-500/40 flex items-center justify-center gap-2"
             >
-              {isSubmitting ? (
-                <>
-                  <RefreshCw className="w-5 h-5 animate-spin" />
-                  Encrypting with Nillion...
-                </>
-              ) : (
-                <>
-                  <Lock className="w-5 h-5" />
-                  Decrypt Private History
-                </>
-              )}
+              <Lock className="w-5 h-5" />
+              Decrypt Private History
             </button>
           </form>
+        ) : isSubmitting ? (
+             <div className="max-w-xl mx-auto mt-12 mb-12 text-center">
+                 <RefreshCw className="w-12 h-12 text-indigo-500 animate-spin mx-auto mb-4" />
+                 <h3 className="text-xl font-bold text-white mb-2">Processing Securely</h3>
+                 <p className="text-slate-400">Encrypting key via Nillion and scanning Zcash blockchain...</p>
+             </div>
         ) : (
           <AnimatePresence>
             <motion.div
@@ -127,7 +121,7 @@ export const Wallet = () => {
                   <div>
                     <h3 className="text-lg font-semibold text-white">Shielded Account</h3>
                     <p className="text-sm text-slate-400 font-mono">
-                      {activeKey.substring(0, 16)}...{activeKey.substring(activeKey.length - 8)}
+                      {activeKey?.substring(0, 16)}...{activeKey?.substring(activeKey.length - 8)}
                     </p>
                   </div>
                 </div>
@@ -156,9 +150,7 @@ export const Wallet = () => {
 
               <div className="space-y-4">
                 <h4 className="text-md font-medium text-white">Transaction History</h4>
-                {isLoading ? (
-                  <div className="text-center py-10 text-slate-500">Loading secure history...</div>
-                ) : data?.transactions?.length > 0 ? (
+                {data?.transactions?.length > 0 ? (
                   data.transactions.map((tx: any, i: number) => (
                     <div key={i} className="flex items-center justify-between p-4 bg-slate-800/30 rounded-xl border border-slate-700/30">
                       <div className="flex items-center gap-3">

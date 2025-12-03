@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
-import { getStats, getTransactions } from '../services/api';
+import { getStats, getTransactions, getVolume } from '../services/api';
 import {
   ArrowUpRight,
   ArrowDownRight,
@@ -9,7 +9,7 @@ import {
   ShieldCheck,
   Clock
 } from 'lucide-react';
-import { AreaChart, Area, Tooltip, ResponsiveContainer } from 'recharts';
+import { AreaChart, Area, Tooltip, ResponsiveContainer, XAxis, YAxis } from 'recharts';
 
 const StatCard = ({ title, value, change, icon: Icon, trend }: any) => (
   <div className="bg-slate-900/50 backdrop-blur-sm border border-slate-800/60 p-6 rounded-2xl relative overflow-hidden group hover:border-indigo-500/30 transition-colors duration-300">
@@ -49,7 +49,12 @@ export const Dashboard = () => {
     refetchInterval: 5000
   });
 
-  // Helper to format Hashrate (Sol/s to MS/s, GS/s)
+  const { data: volumeData } = useQuery({
+    queryKey: ['volume', '24h'],
+    queryFn: () => getVolume('24h'),
+    refetchInterval: 30000
+  });
+
   const formatHashrate = (solps: number) => {
     if (!solps) return '0 Sol/s';
     if (solps > 1e9) return `${(solps / 1e9).toFixed(2)} GS/s`;
@@ -57,11 +62,6 @@ export const Dashboard = () => {
     return `${solps.toFixed(2)} Sol/s`;
   };
 
-  // Helper to format Pool Size (ZEC)
-  // Assuming shieldedPoolSize is in zatoshis, need to convert to ZEC?
-  // Check backend analytics.ts: "SUM(shielded_outputs)" - this is DB dependent.
-  // Standard Zcash DBs store values in Zatoshis (int8).
-  // So we divide by 1e8 to get ZEC.
   const formatPoolSize = (size: number, price: number) => {
      if (!size) return '$0.00';
      const zec = size / 100000000;
@@ -72,16 +72,11 @@ export const Dashboard = () => {
      return `$${usd.toFixed(2)}`;
   };
 
-  // Mock chart data for visualization (to be replaced with live volume data later)
-  const chartData = [
-    { name: 'Mon', value: 4000 },
-    { name: 'Tue', value: 3000 },
-    { name: 'Wed', value: 2000 },
-    { name: 'Thu', value: 2780 },
-    { name: 'Fri', value: 1890 },
-    { name: 'Sat', value: 2390 },
-    { name: 'Sun', value: 3490 },
-  ];
+  // Prepare chart data from API response or use fallback empty array
+  const chartData = (volumeData as any)?.data?.volumeData?.map((item: any) => ({
+    name: new Date(item.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+    value: item.totalInputs + item.totalOutputs // Total Volume
+  })) || [];
 
   return (
     <div className="space-y-6">
@@ -101,15 +96,11 @@ export const Dashboard = () => {
         <StatCard
           title="Network Hashrate"
           value={formatHashrate(stats?.networkHashrate)}
-          // change="2.1" // Removed hardcoded change
-          // trend="up"
           icon={Cpu}
         />
         <StatCard
           title="Shielded Pool Value"
           value={formatPoolSize(stats?.shieldedPoolSize, stats?.price)}
-          // change="0.8" // Removed hardcoded change
-          // trend="up"
           icon={ShieldCheck}
         />
       </div>
@@ -117,7 +108,7 @@ export const Dashboard = () => {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Main Chart */}
         <div className="lg:col-span-2 bg-slate-900/50 backdrop-blur-sm border border-slate-800/60 rounded-2xl p-6">
-          <h3 className="text-lg font-semibold text-white mb-6">Network Activity</h3>
+          <h3 className="text-lg font-semibold text-white mb-6">Network Volume (24h)</h3>
           <div className="h-[300px] w-full">
             <ResponsiveContainer width="100%" height="100%">
               <AreaChart data={chartData}>
@@ -127,6 +118,8 @@ export const Dashboard = () => {
                     <stop offset="95%" stopColor="#6366f1" stopOpacity={0}/>
                   </linearGradient>
                 </defs>
+                <XAxis dataKey="name" stroke="#475569" fontSize={12} tickLine={false} axisLine={false} />
+                <YAxis stroke="#475569" fontSize={12} tickLine={false} axisLine={false} tickFormatter={(value) => `${value}`} />
                 <Tooltip
                   contentStyle={{ backgroundColor: '#0f172a', borderColor: '#1e293b' }}
                   itemStyle={{ color: '#e2e8f0' }}
@@ -148,7 +141,6 @@ export const Dashboard = () => {
         <div className="bg-slate-900/50 backdrop-blur-sm border border-slate-800/60 rounded-2xl p-6">
           <h3 className="text-lg font-semibold text-white mb-6">Recent Transactions</h3>
           <div className="space-y-4">
-            {/* Fix type error by casting or optional chaining */}
             {(txData as any)?.transactions?.map((tx: any) => (
               <div key={tx.txHash} className="flex items-center justify-between p-3 rounded-xl bg-slate-800/30 hover:bg-slate-800/50 transition-colors border border-slate-700/30">
                 <div className="flex items-center gap-3">
