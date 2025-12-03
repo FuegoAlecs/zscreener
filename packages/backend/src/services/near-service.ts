@@ -81,13 +81,7 @@ export class NEARService {
       };
     } catch (error) {
        console.error('Failed to prepare cross-chain intent:', error);
-       // Return mock if testnet contract is unreachable in this env
-       return {
-         intentId: `mock-intent-${Date.now()}`,
-         status: 'simulated',
-         note: 'MPC Contract unreachable, returning simulation',
-         args: { payload: zcashTxHash }
-       };
+       throw new Error(`Failed to interact with NEAR MPC contract: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   }
 

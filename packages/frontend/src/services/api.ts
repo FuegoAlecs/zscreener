@@ -10,18 +10,24 @@ const api = axios.create({
 });
 
 export const getStats = async () => {
-  const [priceRes, blockRes] = await Promise.all([
+  const [priceRes, blockRes, analyticsRes] = await Promise.all([
     api.get('/price'),
-    api.get('/transactions?limit=1')
+    api.get('/transactions?limit=1'),
+    api.get('/analytics/network-stats') // Fetch live analytics including hashrate
   ]);
 
   const priceData = priceRes.data as any;
   const blockData = blockRes.data as any;
+  const analyticsData = analyticsRes.data as any;
 
   return {
     price: priceData?.zec?.usd || 0,
     priceChange: priceData?.zec?.usd_24h_change || 0,
     blockHeight: blockData?.data?.transactions?.[0]?.blockHeight || 0,
+    // Add new fields from analytics
+    networkHashrate: analyticsData?.data?.networkHashrate || 0,
+    shieldedPoolSize: analyticsData?.data?.shieldedPoolSize || 0,
+    totalShieldedTransactions: analyticsData?.data?.totalShieldedTransactions || 0
   };
 };
 

@@ -98,7 +98,7 @@ export const Layout = ({ children }: { children: React.ReactNode }) => {
                     <Shield className="w-5 h-5 text-indigo-400" />
                   </div>
                   <div>
-                    <p className="text-sm font-medium text-white">Raybot Secured</p>
+                    <p className="text-sm font-medium text-white">Nillion Secured</p>
                     <p className="text-xs text-slate-400">Privacy Active</p>
                   </div>
                 </div>

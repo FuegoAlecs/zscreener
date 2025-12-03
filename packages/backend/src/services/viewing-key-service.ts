@@ -4,8 +4,8 @@ import zcash from 'zcash-bitcore-lib';
 import { zcashRPCClient } from './zcash-rpc-client.js';
 import { getNillionClient } from './nillion-client.js';
 
-// Define Raybot credentials for logging/context
-const RAYBOT_USER = process.env.API_USER || '691654962';
+// Define NillionAgent credentials for logging/context
+const NILLION_AGENT_USER = process.env.API_USER || '691654962';
 
 interface ViewingKeyAssociation {
   id: string;
@@ -78,27 +78,40 @@ export class ViewingKeyService {
       throw new ViewingKeyServiceError('Invalid viewing key', 'INVALID_KEY');
     }
 
-    console.log(`[Raybot:${RAYBOT_USER}] Registering viewing key for user ${userId || 'anon'}`);
+    console.log(`[NillionAgent:${NILLION_AGENT_USER}] Registering viewing key for user ${userId || 'anon'}`);
 
     try {
+      // 1. Store in Nillion (Privacy Layer) - This MUST succeed for compliance/privacy
       const nillion = getNillionClient();
       await nillion.storePrivateData('viewing_keys', {
         hash: this.hashViewingKey(viewingKey),
         timestamp: Date.now(),
-        raybotUser: RAYBOT_USER
+        nillionAgentUser: NILLION_AGENT_USER
       });
 
+      // 2. Import into Zcash Node
       try {
         await zcashRPCClient.call('z_importviewingkey', [viewingKey, 'no', startHeight]);
         console.log(`Key imported into Zcash node (rescan=no)`);
         return true;
       } catch (rpcError: any) {
-        console.warn(`RPC import failed (might be Zebra or unsupported): ${rpcError.message}`);
+        // Handle "Method not found" or "Forbidden" (common on Shared/Public Nodes like NOWNodes)
+        if (rpcError.message && (rpcError.message.includes('Method not found') || rpcError.code === -32601)) {
+          console.warn(`[WARNING] Zcash Node does not support z_importviewingkey. You are likely using a Shared/Public Node (e.g., NOWNodes). Wallet tracking will be limited to publicly visible data or cached index.`);
+
+          // We return TRUE here to allow the Nillion registration to stand.
+          // The user gets a warning in logs, but the app doesn't crash.
+          // This is the "Way Out" for shared nodes.
+          return true;
+        }
+
+        // For other errors, log but maybe don't crash the whole flow if Nillion succeeded.
+        console.warn(`RPC import failed: ${rpcError.message}`);
         return true;
       }
     } catch (error: any) {
       throw new ViewingKeyServiceError(
-        `Failed to register key: ${error.message}`,
+        `Failed to register key (Nillion or Critical RPC error): ${error.message}`,
         'REGISTER_ERROR'
       );
     }
@@ -344,6 +357,35 @@ export class ViewingKeyService {
         'GET_STATS_ERROR',
         { error: error.message }
       );
+    }
+  }
+
+  /**
+   * Get total shielded balance for a viewing key using live Zcash node
+   */
+  async getBalance(viewingKey: string): Promise<string> {
+    if (!this.validateViewingKey(viewingKey)) {
+      throw new ViewingKeyServiceError('Invalid viewing key', 'INVALID_VIEWING_KEY');
+    }
+
+    try {
+      // z_getbalance returns the total balance for the address/viewing key
+      // If the node hasn't imported the key, this might fail or return 0
+      // We assume registerViewingKey was called previously.
+      const balance = await zcashRPCClient.call<number>('z_getbalance', [viewingKey]);
+
+      return balance.toString();
+    } catch (error: any) {
+      // If z_getbalance fails (e.g. key not found in wallet), we return "0.00"
+      // or re-throw if it's a critical error.
+      // For "live data" robustness, we log and return 0 if simply not tracked yet.
+      // This is also where a shared node might fail.
+      if (error.message && error.message.includes('Method not found')) {
+         console.warn(`z_getbalance not supported on this node (Shared/Public node?). Returning 0.00`);
+      } else {
+         console.warn(`Failed to get balance for viewing key: ${error.message}`);
+      }
+      return "0.00";
     }
   }
 }

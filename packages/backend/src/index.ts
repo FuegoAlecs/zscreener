@@ -169,5 +169,5 @@ httpServer.listen(PORT, () => {
   console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);
   console.log(`WebSocket server ready at ws://localhost:${PORT}`);
   console.log(`Price oracle service started`);
-  console.log(`Raybot Integration: Enabled (User: ${process.env.API_USER})`);
+  console.log(`NillionAgent Integration: Enabled (User: ${process.env.API_USER})`);
 });

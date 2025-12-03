@@ -32,7 +32,7 @@ export const Wallet = () => {
     if (!viewingKey) return;
 
     setIsSubmitting(true);
-    // Simulate Raybot secure storage delay
+    // Simulate Nillion secure storage delay (for UI feedback)
     await new Promise(resolve => setTimeout(resolve, 1500));
     setActiveKey(viewingKey);
     setIsSubmitting(false);
@@ -56,7 +56,7 @@ export const Wallet = () => {
       <div className="bg-slate-900/50 backdrop-blur-sm border border-slate-800/60 rounded-2xl p-8 relative overflow-hidden">
         <div className="absolute top-4 right-4 flex items-center gap-2 px-3 py-1.5 bg-indigo-950/50 border border-indigo-500/20 rounded-full">
           <div className="w-2 h-2 bg-indigo-500 rounded-full animate-pulse" />
-          <span className="text-xs font-medium text-indigo-300">Raybot Secure Enclave</span>
+          <span className="text-xs font-medium text-indigo-300">Nillion Secure Enclave</span>
         </div>
 
         {!activeKey ? (
@@ -90,7 +90,7 @@ export const Wallet = () => {
               <AlertTriangle className="w-5 h-5 text-amber-500 flex-shrink-0 mt-0.5" />
               <div className="text-sm text-amber-200/80">
                 <p className="font-medium text-amber-200 mb-1">Privacy Notice</p>
-                Your viewing key is never stored in plain text. It is encrypted using Raybot's privacy-preserving infrastructure before being used to query the blockchain.
+                Your viewing key is never stored in plain text. It is encrypted using Nillion's privacy-preserving infrastructure before being used to query the blockchain.
               </div>
             </div>
 
@@ -102,7 +102,7 @@ export const Wallet = () => {
               {isSubmitting ? (
                 <>
                   <RefreshCw className="w-5 h-5 animate-spin" />
-                  Encrypting with Raybot...
+                  Encrypting with Nillion...
                 </>
               ) : (
                 <>

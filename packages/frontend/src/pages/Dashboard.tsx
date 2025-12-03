@@ -49,7 +49,30 @@ export const Dashboard = () => {
     refetchInterval: 5000
   });
 
-  // Mock chart data for visualization
+  // Helper to format Hashrate (Sol/s to MS/s, GS/s)
+  const formatHashrate = (solps: number) => {
+    if (!solps) return '0 Sol/s';
+    if (solps > 1e9) return `${(solps / 1e9).toFixed(2)} GS/s`;
+    if (solps > 1e6) return `${(solps / 1e6).toFixed(2)} MS/s`;
+    return `${solps.toFixed(2)} Sol/s`;
+  };
+
+  // Helper to format Pool Size (ZEC)
+  // Assuming shieldedPoolSize is in zatoshis, need to convert to ZEC?
+  // Check backend analytics.ts: "SUM(shielded_outputs)" - this is DB dependent.
+  // Standard Zcash DBs store values in Zatoshis (int8).
+  // So we divide by 1e8 to get ZEC.
+  const formatPoolSize = (size: number, price: number) => {
+     if (!size) return '$0.00';
+     const zec = size / 100000000;
+     const usd = zec * (price || 0);
+
+     if (usd > 1e6) return `$${(usd / 1e6).toFixed(1)}M`;
+     if (usd > 1e3) return `$${(usd / 1e3).toFixed(1)}K`;
+     return `$${usd.toFixed(2)}`;
+  };
+
+  // Mock chart data for visualization (to be replaced with live volume data later)
   const chartData = [
     { name: 'Mon', value: 4000 },
     { name: 'Tue', value: 3000 },
@@ -77,16 +100,16 @@ export const Dashboard = () => {
         />
         <StatCard
           title="Network Hashrate"
-          value="8.24 GS/s"
-          change="2.1"
-          trend="up"
+          value={formatHashrate(stats?.networkHashrate)}
+          // change="2.1" // Removed hardcoded change
+          // trend="up"
           icon={Cpu}
         />
         <StatCard
-          title="Shielded Pool"
-          value="$245.8M"
-          change="0.8"
-          trend="up"
+          title="Shielded Pool Value"
+          value={formatPoolSize(stats?.shieldedPoolSize, stats?.price)}
+          // change="0.8" // Removed hardcoded change
+          // trend="up"
           icon={ShieldCheck}
         />
       </div>
