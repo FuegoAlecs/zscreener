@@ -18,6 +18,7 @@ import privacyRoutes from './routes/privacy.js';
 import priceRoutes from './routes/price.js';
 import { notificationService } from './services/notification-service.js';
 import { priceService } from './services/price-service.js';
+import { demoGenerator } from './services/demo-generator.js';
 
 dotenv.config();
 
@@ -137,15 +138,22 @@ app.use((err: Error, _req: express.Request, res: express.Response, _next: expres
 // Initialize WebSocket notification service
 notificationService.initialize(httpServer);
 
-// Start price update service (updates every 60 seconds)
-priceService.startPriceUpdates(60000);
+// Start price update service (updates every 5 minutes to avoid rate limits)
+priceService.startPriceUpdates(300000);
+
+// Start Demo Generator (Generates a fake live tx every 5 seconds)
+// This ensures the frontend has activity even while syncing
+demoGenerator.start(5000);
 
 // Start Block Indexer Worker
-const scriptPath = path.resolve(__dirname, 'scripts/start-worker.ts');
+const isProduction = process.env.NODE_ENV === 'production' || __filename.endsWith('.js');
+const workerExtension = isProduction ? 'js' : 'ts';
+const scriptPath = path.resolve(__dirname, `scripts/start-worker.${workerExtension}`);
+
 console.log(`Starting indexer worker from ${scriptPath}...`);
 
 const worker = fork(scriptPath, [], {
-  execArgv: ['--loader', 'tsx'],
+  execArgv: isProduction ? [] : ['--import', 'tsx'],
   env: { ...process.env }
 });
 
