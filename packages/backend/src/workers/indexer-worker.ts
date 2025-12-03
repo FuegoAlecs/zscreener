@@ -149,15 +149,36 @@ export async function scheduleRangeIndex(
 
 export async function startContinuousSync(pollInterval?: number): Promise<void> {
   // Remove any existing continuous sync jobs
-  const jobs = await indexerQueue.getJobs(['active', 'waiting', 'delayed']);
-  for (const job of jobs) {
-    if (job.name === 'continuous-sync') {
-      await job.remove();
+  try {
+    const jobs = await indexerQueue.getJobs(['active', 'waiting', 'delayed']);
+    for (const job of jobs) {
+      if (job.name === 'continuous-sync') {
+        try {
+          await job.remove();
+        } catch (e) {
+          console.warn(`Failed to remove old job ${job.id}:`, e);
+        }
+      }
     }
+
+    // Also clean the repeat schedule explicitly
+    const repeatableJobs = await indexerQueue.getRepeatableJobs();
+    for (const job of repeatableJobs) {
+      if (job.name === 'continuous-sync') {
+        await indexerQueue.removeRepeatableByKey(job.key);
+      }
+    }
+  } catch (error) {
+    console.warn('Error cleaning up old jobs, proceeding anyway:', error);
   }
   
   // Add new continuous sync job
   await indexerQueue.add('continuous-sync', { pollInterval }, {
+    attempts: Number.MAX_SAFE_INTEGER, // Never give up
+    backoff: {
+      type: 'fixed',
+      delay: 5000, // Retry every 5 seconds if it crashes
+    },
     repeat: {
       every: pollInterval || 10000,
     },
