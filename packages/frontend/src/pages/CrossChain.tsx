@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useMutation } from '@tanstack/react-query';
+import { createIntent } from '../services/api';
 import {
   ArrowRightLeft,
   ShieldCheck,
@@ -8,19 +9,6 @@ import {
   ArrowRight
 } from 'lucide-react';
 import { motion } from 'framer-motion';
-
-// Mock API for Cross Chain until full backend route is up
-const createIntent = async (data: any) => {
-  // In reality: axios.post('/api/cross-chain/intent', data)
-  // Suppress unused warning
-  if (data) { /* no-op */ }
-  await new Promise(r => setTimeout(r, 2000));
-  return {
-    intentId: `intent-${Date.now()}`,
-    status: 'signed',
-    txHash: 'near-tx-hash-123...'
-  };
-};
 
 export const CrossChain = () => {
   const [amount, setAmount] = useState('');
@@ -166,7 +154,7 @@ export const CrossChain = () => {
                  </p>
                  <p className="text-slate-400 text-xs mb-2">Transaction Hash:</p>
                  <p className="font-mono text-xs text-white break-all bg-slate-950/50 p-2 rounded border border-slate-800">
-                   {mutation.data?.txHash}
+                   {(mutation.data as any)?.txHash || 'Pending Confirmation'}
                  </p>
                </motion.div>
              )}

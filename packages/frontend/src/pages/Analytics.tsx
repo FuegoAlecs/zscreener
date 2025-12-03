@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
-import { getStats } from '../services/api';
+import { getStats, getVolume } from '../services/api';
 import {
   AreaChart,
   Area,
@@ -10,18 +10,9 @@ import {
   ResponsiveContainer,
   BarChart,
   Bar,
-  LineChart,
-  Line
+  Legend
 } from 'recharts';
 import { Activity, Zap, TrendingUp, Hash } from 'lucide-react';
-
-// Mock historical data since we don't have a full indexer history yet
-const mockHistoryData = Array.from({ length: 24 }, (_, i) => ({
-  time: `${i}:00`,
-  transactions: Math.floor(Math.random() * 50) + 10,
-  hashrate: 400 + Math.random() * 100,
-  price: 30 + Math.random() * 5
-}));
 
 export const Analytics = () => {
   const { data: stats } = useQuery({
@@ -29,6 +20,20 @@ export const Analytics = () => {
     queryFn: getStats,
     refetchInterval: 10000
   });
+
+  const { data: volumeData } = useQuery({
+    queryKey: ['volume', '24h'],
+    queryFn: () => getVolume('24h'),
+    refetchInterval: 30000
+  });
+
+  // Transform API data for Recharts
+  const chartData = (volumeData as any)?.data?.volumeData?.map((item: any) => ({
+    time: new Date(item.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+    transactions: item.transactionCount,
+    inputs: item.totalInputs,
+    outputs: item.totalOutputs
+  })) || [];
 
   return (
     <div className="space-y-8">
@@ -93,12 +98,12 @@ export const Analytics = () => {
 
       {/* Charts Section */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Transaction Volume Chart */}
+        {/* Transaction Count Chart */}
         <div className="bg-slate-900/50 backdrop-blur-sm border border-slate-800/60 p-6 rounded-2xl">
-          <h3 className="text-lg font-semibold text-white mb-6">24h Transaction Volume</h3>
+          <h3 className="text-lg font-semibold text-white mb-6">Transaction Count (24h)</h3>
           <div className="h-[300px] w-full">
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={mockHistoryData}>
+              <BarChart data={chartData}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" />
                 <XAxis dataKey="time" stroke="#475569" tick={{ fontSize: 12 }} />
                 <YAxis stroke="#475569" tick={{ fontSize: 12 }} />
@@ -106,22 +111,26 @@ export const Analytics = () => {
                   contentStyle={{ backgroundColor: '#0f172a', borderColor: '#1e293b', borderRadius: '8px' }}
                   itemStyle={{ color: '#fff' }}
                 />
-                <Bar dataKey="transactions" fill="#6366f1" radius={[4, 4, 0, 0]} />
+                <Bar dataKey="transactions" fill="#6366f1" radius={[4, 4, 0, 0]} name="Transactions" />
               </BarChart>
             </ResponsiveContainer>
           </div>
         </div>
 
-        {/* Network Hashrate Chart */}
+        {/* Shielded Activity Chart */}
         <div className="bg-slate-900/50 backdrop-blur-sm border border-slate-800/60 p-6 rounded-2xl">
-          <h3 className="text-lg font-semibold text-white mb-6">Network Hashrate Trend</h3>
+          <h3 className="text-lg font-semibold text-white mb-6">Shielded Inputs vs Outputs (24h)</h3>
           <div className="h-[300px] w-full">
             <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={mockHistoryData}>
+              <AreaChart data={chartData}>
                 <defs>
-                  <linearGradient id="colorHashrate" x1="0" y1="0" x2="0" y2="1">
+                  <linearGradient id="colorInputs" x1="0" y1="0" x2="0" y2="1">
                     <stop offset="5%" stopColor="#10b981" stopOpacity={0.3} />
                     <stop offset="95%" stopColor="#10b981" stopOpacity={0} />
+                  </linearGradient>
+                  <linearGradient id="colorOutputs" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#f43f5e" stopOpacity={0.3} />
+                    <stop offset="95%" stopColor="#f43f5e" stopOpacity={0} />
                   </linearGradient>
                 </defs>
                 <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" />
@@ -131,27 +140,10 @@ export const Analytics = () => {
                   contentStyle={{ backgroundColor: '#0f172a', borderColor: '#1e293b', borderRadius: '8px' }}
                   itemStyle={{ color: '#fff' }}
                 />
-                <Area type="monotone" dataKey="hashrate" stroke="#10b981" fillOpacity={1} fill="url(#colorHashrate)" />
+                <Legend />
+                <Area type="monotone" dataKey="inputs" stroke="#10b981" fillOpacity={1} fill="url(#colorInputs)" name="Shielded Inputs" />
+                <Area type="monotone" dataKey="outputs" stroke="#f43f5e" fillOpacity={1} fill="url(#colorOutputs)" name="Shielded Outputs" />
               </AreaChart>
-            </ResponsiveContainer>
-          </div>
-        </div>
-
-        {/* Price History Chart */}
-        <div className="bg-slate-900/50 backdrop-blur-sm border border-slate-800/60 p-6 rounded-2xl lg:col-span-2">
-          <h3 className="text-lg font-semibold text-white mb-6">ZEC Price History</h3>
-          <div className="h-[300px] w-full">
-            <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={mockHistoryData}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" />
-                <XAxis dataKey="time" stroke="#475569" tick={{ fontSize: 12 }} />
-                <YAxis stroke="#475569" tick={{ fontSize: 12 }} domain={['dataMin - 5', 'dataMax + 5']} />
-                <Tooltip
-                  contentStyle={{ backgroundColor: '#0f172a', borderColor: '#1e293b', borderRadius: '8px' }}
-                  itemStyle={{ color: '#fff' }}
-                />
-                <Line type="monotone" dataKey="price" stroke="#f59e0b" strokeWidth={2} dot={false} />
-              </LineChart>
             </ResponsiveContainer>
           </div>
         </div>
