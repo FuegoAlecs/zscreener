@@ -26,6 +26,7 @@
   },
   "dependencies": {
     "@bitgo/sdk-coin-zec": "^2.6.0",
+    "@types/nodemailer": "^7.0.4",
     "axios": "^1.13.2",
     "bitcore-lib-zcash": "^0.13.20",
     "bull": "^4.11.0",

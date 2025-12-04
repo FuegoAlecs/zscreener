@@ -100,7 +100,7 @@ export class ZcashRPCClient {
       user: config?.user || process.env.ZCASH_RPC_USER || 'zcashrpc',
       password: config?.password || process.env.ZCASH_RPC_PASSWORD || '',
       timeout: config?.timeout || 60000, // Increased to 60s for slow nodes
-      maxRetries: config?.maxRetries || 10, // Increased retries
+      maxRetries: config?.maxRetries || 50, // Increased retries (10 -> 50) for persistent background sync
       retryDelay: config?.retryDelay || 5000, // Increased delay between retries
     };
 
