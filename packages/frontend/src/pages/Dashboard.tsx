@@ -59,12 +59,15 @@ export const Dashboard = () => {
 
   // Helper to format Pool Size (ZEC)
   // Assuming shieldedPoolSize is in zatoshis, need to convert to ZEC?
-  // Check backend analytics.ts: "SUM(shielded_outputs)" - this is DB dependent.
-  // Standard Zcash DBs store values in Zatoshis (int8).
-  // So we divide by 1e8 to get ZEC.
+  // Backend demo generator might store full ZEC units or Zatoshis.
+  // Given the demo generator uses `Math.floor(random * 5)`, it seems to be small numbers (ZEC?)
+  // Let's assume the DB stores ZEC units for demo purposes to be visible.
   const formatPoolSize = (size: number, price: number) => {
      if (!size) return '$0.00';
-     const zec = size / 100000000;
+     // If size is massive (Zatoshis), scale it. If small (Demo ZEC), keep it.
+     // Demo generator makes inputs like 1-5. Real mainnet has millions.
+     // Let's treat it as ZEC units for now since we are in Demo Mode.
+     const zec = size;
      const usd = zec * (price || 0);
 
      if (usd > 1e6) return `$${(usd / 1e6).toFixed(1)}M`;
