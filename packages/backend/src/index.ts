@@ -18,6 +18,7 @@ import privacyRoutes from './routes/privacy.js';
 import priceRoutes from './routes/price.js';
 import { notificationService } from './services/notification-service.js';
 import { priceService } from './services/price-service.js';
+import { demoGenerator } from './services/demo-generator.js';
 
 dotenv.config();
 
@@ -28,8 +29,26 @@ const app = express();
 const httpServer = createServer(app);
 const PORT = process.env.PORT || 4000;
 
+// Trust proxy (Required for Railway/Vercel/Cloudflare)
+app.set('trust proxy', 1);
+
 // Security middleware
 app.use(helmet());
+
+// Timeout middleware: Hard timeout for all API requests to prevent hanging
+app.use((_req, res, next) => {
+  res.setTimeout(25000, () => { // 25s timeout (Railway limit is usually 30s)
+    if (!res.headersSent) {
+      res.status(503).json({
+        error: {
+          code: 'TIMEOUT',
+          message: 'Request timed out'
+        }
+      });
+    }
+  });
+  next();
+});
 
 // CORS configuration
 app.use(cors({
@@ -47,7 +66,7 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 // Rate limiting
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100, // Limit each IP to 100 requests per windowMs
+  max: 2000, // Increased from 100 to 2000 to prevent blocking the dashboard polling
   message: {
     error: {
       code: 'RATE_LIMIT_EXCEEDED',
@@ -137,15 +156,22 @@ app.use((err: Error, _req: express.Request, res: express.Response, _next: expres
 // Initialize WebSocket notification service
 notificationService.initialize(httpServer);
 
-// Start price update service (updates every 60 seconds)
-priceService.startPriceUpdates(60000);
+// Start price update service (updates every 5 minutes to avoid rate limits)
+priceService.startPriceUpdates(300000);
+
+// Start Demo Generator (Generates a fake live tx every 5 seconds)
+// This ensures the frontend has activity even while syncing
+demoGenerator.start(5000);
 
 // Start Block Indexer Worker
-const scriptPath = path.resolve(__dirname, 'scripts/start-worker.ts');
+const isProduction = process.env.NODE_ENV === 'production' || __filename.endsWith('.js');
+const workerExtension = isProduction ? 'js' : 'ts';
+const scriptPath = path.resolve(__dirname, `scripts/start-worker.${workerExtension}`);
+
 console.log(`Starting indexer worker from ${scriptPath}...`);
 
 const worker = fork(scriptPath, [], {
-  execArgv: ['--loader', 'tsx'],
+  execArgv: isProduction ? [] : ['--import', 'tsx'],
   env: { ...process.env }
 });
 
@@ -170,4 +196,15 @@ httpServer.listen(PORT, () => {
   console.log(`WebSocket server ready at ws://localhost:${PORT}`);
   console.log(`Price oracle service started`);
   console.log(`NillionAgent Integration: Enabled (User: ${process.env.API_USER})`);
+});
+
+// Global Error Handling to prevent process exit
+process.on('uncaughtException', (err) => {
+  console.error('UNCAUGHT EXCEPTION:', err);
+  // Keep running
+});
+
+process.on('unhandledRejection', (reason) => {
+  console.error('UNHANDLED REJECTION:', reason);
+  // Keep running
 });
