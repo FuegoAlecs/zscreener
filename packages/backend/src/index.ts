@@ -51,7 +51,7 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 // Rate limiting
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100, // Limit each IP to 100 requests per windowMs
+  max: 50000, // Limit each IP to 50000 requests per windowMs (Increased for Demo/Scripts)
   message: {
     error: {
       code: 'RATE_LIMIT_EXCEEDED',
@@ -68,7 +68,7 @@ app.use('/api/', limiter);
 // Stricter rate limiting for authentication endpoints
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 20, // Limit each IP to 20 auth requests per windowMs
+  max: 10000, // Limit each IP to 10000 auth requests per windowMs
   message: {
     error: {
       code: 'AUTH_RATE_LIMIT_EXCEEDED',

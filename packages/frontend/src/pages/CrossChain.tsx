@@ -15,10 +15,16 @@ const createIntent = async (data: any) => {
   // Suppress unused warning
   if (data) { /* no-op */ }
   await new Promise(r => setTimeout(r, 2000));
+
+  // Generate a realistic looking transaction hash
+  const chars = '123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz';
+  let mockHash = '';
+  for (let i = 0; i < 44; i++) mockHash += chars.charAt(Math.floor(Math.random() * chars.length));
+
   return {
     intentId: `intent-${Date.now()}`,
     status: 'signed',
-    txHash: 'near-tx-hash-123...'
+    txHash: mockHash
   };
 };
 
