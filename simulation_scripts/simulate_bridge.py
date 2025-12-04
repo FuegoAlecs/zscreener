@@ -1,9 +1,14 @@
 import requests
 import time
 import sys
+import random
 
 # Configuration
 API_URL = "https://backend-production.up.railway.app/api"
+
+def generate_mock_hash():
+    chars = '123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz'
+    return ''.join(random.choice(chars) for _ in range(44))
 
 def simulate_cross_chain():
     print(f"🌉 Starting Cross-Chain Bridge Simulation (ZEC -> NEAR)")
@@ -30,8 +35,10 @@ def simulate_cross_chain():
         print("✅ MPC Signature Generated")
         print("✅ Transaction Broadcasted to NEAR")
 
+        tx_hash = generate_mock_hash()
+
         print("\n🎉 Success! Bridge Complete.")
-        print(f"   Tx Hash: 9876543210abcdef...")
+        print(f"   Tx Hash: {tx_hash}")
         print(f"   Status: Finalized")
 
     except Exception as e:
