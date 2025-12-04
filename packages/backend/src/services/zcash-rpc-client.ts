@@ -99,9 +99,9 @@ export class ZcashRPCClient {
       url: config?.url || process.env.ZCASH_RPC_URL || 'http://localhost:8232',
       user: config?.user || process.env.ZCASH_RPC_USER || 'zcashrpc',
       password: config?.password || process.env.ZCASH_RPC_PASSWORD || '',
-      timeout: config?.timeout || 30000,
-      maxRetries: config?.maxRetries || 3,
-      retryDelay: config?.retryDelay || 1000,
+      timeout: config?.timeout || 60000, // Increased to 60s for slow nodes
+      maxRetries: config?.maxRetries || 10, // Increased retries
+      retryDelay: config?.retryDelay || 5000, // Increased delay between retries
     };
 
     this.client = axios.create({
@@ -123,7 +123,8 @@ export class ZcashRPCClient {
    */
   public async call<T = any>(
     method: string,
-    params: any[] = []
+    params: any[] = [],
+    options: Partial<ZcashRPCConfig> = {}
   ): Promise<T> {
     const request: RPCRequest = {
       jsonrpc: '1.0',
@@ -132,11 +133,15 @@ export class ZcashRPCClient {
       params,
     };
 
+    const maxRetries = options.maxRetries ?? this.config.maxRetries;
+    const timeout = options.timeout ?? this.config.timeout;
+    const retryDelay = options.retryDelay ?? this.config.retryDelay;
+
     let lastError: Error | null = null;
 
-    for (let attempt = 1; attempt <= this.config.maxRetries; attempt++) {
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
       try {
-        const response = await this.client.post<RPCResponse<T>>('', request);
+        const response = await this.client.post<RPCResponse<T>>('', request, { timeout });
 
         if (response.data.error) {
           throw new ZcashRPCError(
@@ -164,17 +169,17 @@ export class ZcashRPCClient {
           );
         }
 
-        if (attempt < this.config.maxRetries) {
-          const delay = this.config.retryDelay * attempt;
+        if (attempt < maxRetries) {
+          const delay = retryDelay * attempt;
           console.warn(
-            `RPC call to ${method} failed (attempt ${attempt}/${this.config.maxRetries}). Retrying in ${delay}ms...`
+            `RPC call to ${method} failed (attempt ${attempt}/${maxRetries}). Retrying in ${delay}ms...`
           );
           await this.sleep(delay);
           continue;
         }
 
         throw new ZcashRPCError(
-          `RPC call to ${method} failed after ${this.config.maxRetries} attempts: ${error.message}`,
+          `RPC call to ${method} failed after ${maxRetries} attempts: ${error.message}`,
           'RPC_MAX_RETRIES_EXCEEDED',
           undefined,
           { method, params, originalError: error.message }
